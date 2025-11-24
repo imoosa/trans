@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Transcription Studio</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f8f9fa; color: #333; }
+        
+        h1 { text-align: center; color: #2c3e50; }
+        .container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+
+        /* Form Styles */
+        .form-group { margin-bottom: 15px; }
+        input[type="text"] { padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: 60%; }
+        button.primary { background-color: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        button.primary:hover { background-color: #0056b3; }
+
+        /* Result Box */
+        .result-section { margin-top: 30px; border-top: 2px solid #eee; padding-top: 20px; }
+        textarea { width: 100%; height: 120px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-family: inherit; resize: vertical; }
+
+        /* Action Bar (Buttons) */
+        .action-bar { display: flex; gap: 10px; margin-top: 10px; align-items: center; background: #f1f3f5; padding: 15px; border-radius: 8px;}
+        
+        select { padding: 8px; border-radius: 4px; border: 1px solid #ccc; }
+        
+        .btn-action { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; color: white; font-weight: bold; }
+        .btn-trans { background-color: #28a745; } /* Green */
+        .btn-para { background-color: #17a2b8; } /* Teal */
+        .btn-trans:hover { background-color: #218838; }
+        .btn-para:hover { background-color: #138496; }
+
+        /* Output Box */
+        .output-box { margin-top: 20px; display: none; }
+        .output-header { font-weight: bold; font-size: 1.1em; margin-bottom: 5px; color: #444; }
+        .loader { display: none; color: #666; font-style: italic; margin-top: 10px; }
+        
+        .error { color: red; background: #ffecec; padding: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🎙️ AI Transcription Studio</h1>
+
+    {% if error %}
+        <p class="error">{{ error }}</p>
+    {% endif %}
+
+    <form action="/transcribe" method="POST" enctype="multipart/form-data">
+        <div class="form-group">
+            <label><input type="radio" name="choice" value="1" checked> <strong>Upload File</strong></label>
+            <input type="file" name="file" style="margin-left: 15px;">
+        </div>
+        
+        <div class="form-group">
+            <label><input type="radio" name="choice" value="2"> <strong>URL Link</strong></label>
+            <input type="text" name="url" placeholder="Paste YouTube/Video link here..." style="margin-left: 15px;">
+        </div>
+        
+        <button type="submit" class="primary">Transcribe Audio</button>
+    </form>
+
+
+    {% if transcript %}
+    <div class="result-section">
+        <h3>1. Original Transcript</h3>
+        <p><small>Detected Language: {{ language }}</small></p>
+        <textarea id="originalText" readonly>{{ transcript }}</textarea>
+
+        <h3>2. Modify Text</h3>
+        <div class="action-bar">
+            
+            <div style="border-right: 1px solid #ccc; padding-right: 20px;">
+                <strong>Translate</strong> to:
+                <select id="targetLang">
+                    <option value="es">Spanish</option>
+                    <option value="fr">French</option>
+                    <option value="de">German</option>
+                    <option value="hi">Hindi</option>
+                    <option value="zh-CN">Chinese</option>
+                    <option value="ja">Japanese</option>
+                </select>
+                <button class="btn-action btn-trans" onclick="processText('translate')">Go</button>
+            </div>
+
+            <div style="padding-left: 10px;">
+                <strong>Paraphrase</strong> (Rewrite):
+                <button class="btn-action btn-para" onclick="processText('paraphrase')">Go</button>
+            </div>
+        </div>
+
+        <p id="loader" class="loader">Processing... please wait...</p>
+
+        <div id="finalOutput" class="output-box">
+            <div class="output-header" id="outputTitle">Result</div>
+            <textarea id="outputText" readonly style="background-color: #f0fff4; border-color: #28a745;"></textarea>
+        </div>
+
+    </div>
+    {% endif %}
+
+</div>
+
+<script>
+    async function processText(mode) {
+        const text = document.getElementById("originalText").value;
+        const outputBox = document.getElementById("finalOutput");
+        const outputText = document.getElementById("outputText");
+        const outputTitle = document.getElementById("outputTitle");
+        const loader = document.getElementById("loader");
+
+        if (!text) return alert("No text to process!");
+
+        // UI Updates
+        loader.style.display = "block";
+        outputBox.style.display = "none";
+        
+        let url = "";
+        let payload = { text: text };
+
+        if (mode === 'translate') {
+            url = "/translate_text";
+            payload.target_lang = document.getElementById("targetLang").value;
+        } else {
+            url = "/paraphrase_text";
+        }
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+
+            loader.style.display = "none";
+            
+            if (data.error) {
+                alert("Error: " + data.error);
+            } else {
+                outputBox.style.display = "block";
+                outputTitle.innerText = data.type; // "Translation" or "Paraphrased Text"
+                outputText.value = data.result;
+            }
+
+        } catch (err) {
+            loader.style.display = "none";
+            alert("Network Error");
+            console.error(err);
+        }
+    }
+</script>
+
+</body>
+</html>
