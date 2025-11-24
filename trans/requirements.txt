@@ -1,9 +1,0 @@
-Flask
-yt-dlp
-faster-whisper
-transformers
-sentencepiece
-deep-translator
-nltk
-# torch is required for faster-whisper and Pegasus model (PyTorch version)
-torch
